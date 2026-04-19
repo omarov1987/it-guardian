@@ -5,21 +5,22 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import smtplib
 from email.mime.text import MIMEText
+import threading
+import time
 
 import models
 from database import SessionLocal, engine
 
-# create tables
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 # =========================
-# 🔐 EMAIL CONFIG
+# EMAIL CONFIG
+# =========================
 EMAIL_SENDER = "omar.hlehel@gmail.com"
 EMAIL_PASSWORD = "sginjqxgngyncvbs"
 EMAIL_RECEIVER = "omar.hlehel@gmail.com"
-
 
 # =========================
 # SEND EMAIL
@@ -34,6 +35,8 @@ def send_email(subject, message):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
             server.send_message(msg)
+
+        print("EMAIL SENT:", subject)
 
     except Exception as e:
         print("Email error:", e)
@@ -89,7 +92,7 @@ def receive_device(device: Device, db: Session = Depends(get_db)):
         db_device.disk_free = device.disk_free
         db_device.last_seen = datetime.utcnow()
 
-        # 🔥 RESET ALERT FLAGS (VERY IMPORTANT)
+        # RESET ALERTS
         db_device.offline_alert_sent = False
         db_device.disk_alert_sent = False
 
@@ -112,76 +115,74 @@ def receive_device(device: Device, db: Session = Depends(get_db)):
 
 
 # =========================
-# GET DEVICES (FIXED JSON)
+# GET DEVICES
 # =========================
 @app.get("/devices")
 def get_devices(db: Session = Depends(get_db)):
     devices = db.query(models.Device).all()
 
-    result = []
-    for d in devices:
-        result.append({
+    return [
+        {
             "hostname": d.hostname,
             "os": d.os,
             "disk_free": d.disk_free,
             "last_seen": d.last_seen.isoformat()
-        })
-
-    return result
+        }
+        for d in devices
+    ]
 
 
 # =========================
-# ALERTS (NO SPAM)
+# BACKGROUND MONITOR 🔥
 # =========================
-@app.get("/alerts")
-def check_alerts(db: Session = Depends(get_db)):
-    alerts = []
-    devices = db.query(models.Device).all()
+def monitor():
+    while True:
+        db = SessionLocal()
+        devices = db.query(models.Device).all()
 
-    for device in devices:
+        for device in devices:
 
-        # -------------------------
-        # OFFLINE CHECK (10 min)
-        # -------------------------
-        if datetime.utcnow() - device.last_seen > timedelta(minutes=10):
-            alerts.append({
-                "device": device.hostname,
-                "type": "offline"
-            })
+            # OFFLINE CHECK
+            if datetime.utcnow() - device.last_seen > timedelta(minutes=10):
 
-            if not device.offline_alert_sent:
-                send_email(
-                    "🚨 Device Offline",
-                    f"{device.hostname} is offline!"
-                )
-                device.offline_alert_sent = True
-                db.commit()
+                if not device.offline_alert_sent:
+                    print(f"[ALERT] {device.hostname} OFFLINE")
 
-        else:
-            if device.offline_alert_sent:
-                device.offline_alert_sent = False
-                db.commit()
+                    send_email(
+                        "🚨 Device Offline",
+                        f"{device.hostname} is offline!"
+                    )
 
-        # -------------------------
-        # LOW DISK CHECK
-        # -------------------------
-        if device.disk_free < 10 * 1024 * 1024 * 1024:
-            alerts.append({
-                "device": device.hostname,
-                "type": "low_disk"
-            })
+                    device.offline_alert_sent = True
+                    db.commit()
 
-            if not device.disk_alert_sent:
-                send_email(
-                    "⚠️ Low Disk Space",
-                    f"{device.hostname} has low disk space!"
-                )
-                device.disk_alert_sent = True
-                db.commit()
+            else:
+                if device.offline_alert_sent:
+                    device.offline_alert_sent = False
+                    db.commit()
 
-        else:
-            if device.disk_alert_sent:
-                device.disk_alert_sent = False
-                db.commit()
+            # LOW DISK
+            if device.disk_free < 10 * 1024 * 1024 * 1024:
 
-    return alerts
+                if not device.disk_alert_sent:
+                    print(f"[ALERT] {device.hostname} LOW DISK")
+
+                    send_email(
+                        "⚠️ Low Disk Space",
+                        f"{device.hostname} has low disk space!"
+                    )
+
+                    device.disk_alert_sent = True
+                    db.commit()
+
+            else:
+                if device.disk_alert_sent:
+                    device.disk_alert_sent = False
+                    db.commit()
+
+        db.close()
+        time.sleep(60)
+
+
+# START BACKGROUND THREAD
+threading.Thread(target=monitor, daemon=True).start()
