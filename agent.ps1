@@ -1,4 +1,4 @@
-$apiUrl = "http://127.0.0.1:8000/device"
+$apiUrl = "https://omar-it-guardian.onrender.com/device"
 
 $hostname = $env:COMPUTERNAME
 $os = (Get-CimInstance Win32_OperatingSystem).Caption

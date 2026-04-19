@@ -88,12 +88,19 @@ def receive_device(device: Device, db: Session = Depends(get_db)):
         db_device.os = device.os_version
         db_device.disk_free = device.disk_free
         db_device.last_seen = datetime.utcnow()
+
+        # 🔥 RESET ALERT FLAGS (VERY IMPORTANT)
+        db_device.offline_alert_sent = False
+        db_device.disk_alert_sent = False
+
     else:
         db_device = models.Device(
             hostname=device.hostname,
             os=device.os_version,
             disk_free=device.disk_free,
-            last_seen=datetime.utcnow()
+            last_seen=datetime.utcnow(),
+            offline_alert_sent=False,
+            disk_alert_sent=False
         )
         db.add(db_device)
 
