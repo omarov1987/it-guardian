@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IT Guardian Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #0b1a2f;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat {
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: #1e2d45;
+        }
+
+        .online { color: #00ff88; }
+        .offline { color: #ff4d4d; }
+        .disk { color: #ffaa00; }
+
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .card {
+            background: #1e2d45;
+            padding: 20px;
+            border-radius: 15px;
+            width: 280px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .card.offline {
+            border: 2px solid #ff4d4d;
+        }
+
+        .card.lowdisk {
+            border: 2px solid #ffaa00;
+        }
+
+        .hostname {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .icon {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🛡️ IT Guardian Dashboard</h1>
+
+<div class="stats">
+    <div class="stat">Total: <span id="total">0</span></div>
+    <div class="stat online">Online: <span id="online">0</span></div>
+    <div class="stat offline">Offline: <span id="offline">0</span></div>
+    <div class="stat disk">Low Disk: <span id="lowdisk">0</span></div>
+</div>
+
+<div class="grid" id="devices"></div>
+
+<script>
+async function load() {
+    const res = await fetch("/devices");
+    const data = await res.json();
+
+    const container = document.getElementById("devices");
+    container.innerHTML = "";
+
+    let online = 0;
+    let offline = 0;
+    let lowdisk = 0;
+
+    data.forEach(d => {
+
+        let lastSeen = new Date(d.last_seen + "Z");
+        let diff = (Date.now() - lastSeen) / 60000;
+
+        let status = "ONLINE";
+        let statusClass = "online";
+
+        if (diff > 10) {
+            status = "OFFLINE";
+            statusClass = "offline";
+            offline++;
+        } else {
+            online++;
+        }
+
+        if (d.disk_free < 10 * 1024 * 1024 * 1024) {
+            lowdisk++;
+        }
+
+        let cardClass = "card";
+
+        if (status === "OFFLINE") {
+            cardClass += " offline";
+        } else if (d.disk_free < 10 * 1024 * 1024 * 1024) {
+            cardClass += " lowdisk";
+        }
+
+        let gb = (d.disk_free / (1024**3)).toFixed(1);
+
+        let minutesAgo = Math.floor(diff);
+
+        container.innerHTML += `
+            <div class="${cardClass}">
+                <div class="hostname">💻 ${d.hostname}</div>
+                <div>OS: ${d.os}</div>
+                <div>Disk: ${gb} GB free</div>
+                <div class="status ${statusClass}">Status: ${status}</div>
+                <div style="font-size:12px;color:gray;">Last seen: ${minutesAgo} min ago</div>
+            </div>
+        `;
+    });
+
+    document.getElementById("total").innerText = data.length;
+    document.getElementById("online").innerText = online;
+    document.getElementById("offline").innerText = offline;
+    document.getElementById("lowdisk").innerText = lowdisk;
+}
+
+setInterval(load, 5000);
+load();
+</script>
+
+</body>
+</html>
