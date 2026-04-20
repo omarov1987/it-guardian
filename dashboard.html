@@ -112,7 +112,7 @@ async function loadDevices() {
 
     data.forEach(d => {
 
-const lastSeen = new Date(d.last_seen);
+const lastSeen = new Date(d.last_seen + "Z");
 const now = new Date();
 
 const diffSeconds = (now.getTime() - lastSeen.getTime()) / 1000;
