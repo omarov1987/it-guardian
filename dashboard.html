@@ -112,10 +112,11 @@ async function loadDevices() {
 
     data.forEach(d => {
 
-        const lastSeen = new Date(d.last_seen);
-        const now = new Date();
+const lastSeen = new Date(d.last_seen);
+const now = new Date();
 
-        const minutes = (now - lastSeen) / 60000;
+const diffSeconds = (now.getTime() - lastSeen.getTime()) / 1000;
+const minutes = diffSeconds / 60;
 
         let status = "ONLINE";
         let css = "online";
