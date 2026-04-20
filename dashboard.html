@@ -1,142 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>IT Guardian Dashboard</title>
+<meta charset="UTF-8">
+<title>IT Guardian Dashboard</title>
 
-    <style>
-        body {
-            font-family: Arial;
-            background: #0b1a2f;
-            color: white;
-            margin: 0;
-            padding: 20px;
-        }
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+}
 
-        h1 {
-            margin-bottom: 20px;
-        }
+.container {
+    padding: 20px;
+}
 
-        .stats {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
+h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-        .stat {
-            padding: 10px 20px;
-            border-radius: 10px;
-            background: #1e2d45;
-        }
+.cards {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
 
-        .online { color: #00ff88; }
-        .offline { color: #ff4d4d; }
-        .disk { color: #ffaa00; }
+.stat {
+    background: #1e293b;
+    padding: 10px 20px;
+    border-radius: 10px;
+}
 
-        .grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
 
-        .card {
-            background: #1e2d45;
-            padding: 20px;
-            border-radius: 15px;
-            width: 280px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
+.card {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 15px;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
 
-        .card.offline {
-            border: 2px solid #ff4d4d;
-        }
+.online {
+    border-left: 5px solid #22c55e;
+}
 
-        .card.lowdisk {
-            border: 2px solid #ffaa00;
-        }
+.offline {
+    border-left: 5px solid #ef4444;
+}
 
-        .hostname {
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
+.lowdisk {
+    border-left: 5px solid #facc15;
+}
 
-        .status {
-            margin-top: 10px;
-            font-weight: bold;
-        }
+.status {
+    font-weight: bold;
+}
 
-        .icon {
-            font-size: 24px;
-            margin-right: 8px;
-        }
-    </style>
+</style>
 </head>
 
 <body>
 
+<div class="container">
+
 <h1>🛡️ IT Guardian Dashboard</h1>
 
-<div class="stats">
+<div class="cards">
     <div class="stat">Total: <span id="total">0</span></div>
-    <div class="stat online">Online: <span id="online">0</span></div>
-    <div class="stat offline">Offline: <span id="offline">0</span></div>
-    <div class="stat disk">Low Disk: <span id="lowdisk">0</span></div>
+    <div class="stat" style="color:#22c55e;">Online: <span id="online">0</span></div>
+    <div class="stat" style="color:#ef4444;">Offline: <span id="offline">0</span></div>
+    <div class="stat" style="color:#facc15;">Low Disk: <span id="lowdisk">0</span></div>
 </div>
 
 <div class="grid" id="devices"></div>
 
+</div>
+
 <script>
-async function load() {
+
+function timeAgo(date) {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+
+    if (seconds < 60) return seconds + " sec ago";
+    if (seconds < 3600) return Math.floor(seconds / 60) + " min ago";
+    if (seconds < 86400) return Math.floor(seconds / 3600) + " h ago";
+
+    return Math.floor(seconds / 86400) + " d ago";
+}
+
+async function loadDevices() {
     const res = await fetch("/devices");
     const data = await res.json();
-
-    const container = document.getElementById("devices");
-    container.innerHTML = "";
 
     let online = 0;
     let offline = 0;
     let lowdisk = 0;
 
+    const container = document.getElementById("devices");
+    container.innerHTML = "";
+
+    // sort online first
+    data.sort((a,b) => new Date(b.last_seen) - new Date(a.last_seen));
+
     data.forEach(d => {
 
-        let lastSeen = new Date(d.last_seen + "Z");
-        let diff = (Date.now() - lastSeen) / 60000;
+        const lastSeen = new Date(d.last_seen);
+        const now = new Date();
+
+        const minutes = (now - lastSeen) / 60000;
 
         let status = "ONLINE";
-        let statusClass = "online";
+        let css = "online";
 
-        if (diff > 10) {
+        if (minutes > 10) {
             status = "OFFLINE";
-            statusClass = "offline";
+            css = "offline";
             offline++;
         } else {
             online++;
         }
 
         if (d.disk_free < 10 * 1024 * 1024 * 1024) {
+            css = "lowdisk";
             lowdisk++;
         }
 
-        let cardClass = "card";
+        const card = document.createElement("div");
+        card.className = "card " + css;
 
-        if (status === "OFFLINE") {
-            cardClass += " offline";
-        } else if (d.disk_free < 10 * 1024 * 1024 * 1024) {
-            cardClass += " lowdisk";
-        }
-
-        let gb = (d.disk_free / (1024**3)).toFixed(1);
-
-        let minutesAgo = Math.floor(diff);
-
-        container.innerHTML += `
-            <div class="${cardClass}">
-                <div class="hostname">💻 ${d.hostname}</div>
-                <div>OS: ${d.os}</div>
-                <div>Disk: ${gb} GB free</div>
-                <div class="status ${statusClass}">Status: ${status}</div>
-                <div style="font-size:12px;color:gray;">Last seen: ${minutesAgo} min ago</div>
-            </div>
+        card.innerHTML = `
+            <h3>💻 ${d.hostname}</h3>
+            <p>OS: ${d.os}</p>
+            <p>Disk: ${(d.disk_free / (1024*1024*1024)).toFixed(1)} GB free</p>
+            <p class="status">Status: ${status}</p>
+            <small>Last seen: ${timeAgo(d.last_seen)}</small>
         `;
+
+        container.appendChild(card);
     });
 
     document.getElementById("total").innerText = data.length;
@@ -145,8 +153,11 @@ async function load() {
     document.getElementById("lowdisk").innerText = lowdisk;
 }
 
-setInterval(load, 5000);
-load();
+// auto refresh every 5 sec
+setInterval(loadDevices, 5000);
+
+loadDevices();
+
 </script>
 
 </body>
