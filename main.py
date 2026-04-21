@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -96,8 +96,8 @@ def receive_device(device: Device, token: str = None, db: Session = Depends(get_
     user = get_current_user(token, db)
 
     db_device = db.query(models.Device).filter(
-    models.Device.hostname == device.hostname
-).first()
+        models.Device.hostname == device.hostname
+    ).first()
 
     if db_device:
         db_device.os = device.os_version
@@ -123,7 +123,8 @@ def receive_device(device: Device, token: str = None, db: Session = Depends(get_
 
 
 @app.get("/devices")
-def get_devices(user=Depends(get_current_user), db: Session = Depends(get_db)):
+def get_devices(token: str = None, db: Session = Depends(get_db)):
+    user = get_current_user(token, db)
 
     devices = db.query(models.Device).filter(
         models.Device.owner_id == user.id
