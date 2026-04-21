@@ -69,29 +69,34 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == username).first()
 
     if not user or user.password != password:
-        return {"error": "wrong credentials"}
+        raise HTTPException(status_code=401, detail="wrong credentials")
 
     return {"message": "login ok", "user_id": user.id}
 
 
 def get_current_user(token: str = Header(None), db: Session = Depends(get_db)):
     if not token:
-        return None
+        raise HTTPException(status_code=401, detail="No token")
 
-    user = db.query(models.User).filter(models.User.id == int(token)).first()
+    try:
+        user_id = int(token)
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
     return user
 
 
 @app.post("/device")
 def receive_device(device: Device, user=Depends(get_current_user), db: Session = Depends(get_db)):
 
-    if not user:
-        raise HTTPException(status_code=401, detail="No user")
-
     db_device = db.query(models.Device).filter(
-        models.Device.hostname == device.hostname,
-        models.Device.owner_id == user.id
-    ).first()
+    models.Device.hostname == device.hostname
+).first()
 
     if db_device:
         db_device.os = device.os_version
@@ -119,23 +124,19 @@ def receive_device(device: Device, user=Depends(get_current_user), db: Session =
 @app.get("/devices")
 def get_devices(user=Depends(get_current_user), db: Session = Depends(get_db)):
 
-    if not user:
-        return []
-
     devices = db.query(models.Device).filter(
         models.Device.owner_id == user.id
     ).all()
 
-    result = []
-    for d in devices:
-        result.append({
+    return [
+        {
             "hostname": d.hostname,
             "os": d.os,
             "disk_free": d.disk_free,
             "last_seen": d.last_seen.isoformat()
-        })
-
-    return result
+        }
+        for d in devices
+    ]
 
 
 @app.get("/alerts")
