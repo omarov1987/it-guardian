@@ -131,9 +131,25 @@ def get_devices(db: Session = Depends(get_db)):
         for d in devices
     ]
 
+@app.post("/register")
+def register(username: str, password: str, db: Session = Depends(get_db)):
+    user = models.User(username=username, password=password)
+    db.add(user)
+    db.commit()
+    return {"status": "user created"}
+
+@app.post("/login")
+def login(username: str, password: str, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.username == username).first()
+
+    if not user or user.password != password:
+        return {"error": "wrong credentials"}
+
+    return {"message": "login ok", "user_id": user.id}
+
 
 # =========================
-# BACKGROUND MONITOR 🔥
+# BACKGROUND MONITOR 
 # =========================
 def monitor():
     while True:
