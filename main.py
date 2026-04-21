@@ -81,7 +81,7 @@ def dashboard():
 # =========================
 # RECEIVE DEVICE
 # =========================
-@app.post("/device")
+@app.get("/device")
 def receive_device(device: Device, db: Session = Depends(get_db)):
     db_device = db.query(models.Device).filter(
         models.Device.hostname == device.hostname
@@ -117,7 +117,7 @@ def receive_device(device: Device, db: Session = Depends(get_db)):
 # =========================
 # GET DEVICES
 # =========================
-@app.get("/devices")
+@app.post("/devices")
 def get_devices(db: Session = Depends(get_db)):
     devices = db.query(models.Device).all()
 
@@ -131,14 +131,14 @@ def get_devices(db: Session = Depends(get_db)):
         for d in devices
     ]
 
-@app.post("/register")
+@app.get("/register")
 def register(username: str, password: str, db: Session = Depends(get_db)):
     user = models.User(username=username, password=password)
     db.add(user)
     db.commit()
     return {"status": "user created"}
 
-@app.post("/login")
+@app.get("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == username).first()
 
