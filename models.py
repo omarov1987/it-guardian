@@ -8,14 +8,12 @@ class Device(Base):
 
     hostname = Column(String, primary_key=True, index=True)
 
-   
-   # owner_id = Column(Integer)
+    owner_id = Column(Integer)
 
     os = Column(String)
     disk_free = Column(Integer)
     last_seen = Column(DateTime, default=datetime.utcnow)
 
-    # alert flags
     offline_alert_sent = Column(Boolean, default=False)
     disk_alert_sent = Column(Boolean, default=False)
 
