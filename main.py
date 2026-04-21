@@ -74,7 +74,7 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     return {"message": "login ok", "user_id": user.id}
 
 
-def get_current_user(token: str = Header(None, alias="token"), db: Session = Depends(get_db)):
+def get_current_user(token: str = None, db: Session = Depends(get_db)):
     if not token:
         raise HTTPException(status_code=401, detail="No token")
 
@@ -92,7 +92,8 @@ def get_current_user(token: str = Header(None, alias="token"), db: Session = Dep
 
 
 @app.post("/device")
-def receive_device(device: Device, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def receive_device(device: Device, token: str = None, db: Session = Depends(get_db)):
+    user = get_current_user(token, db)
 
     db_device = db.query(models.Device).filter(
     models.Device.hostname == device.hostname
