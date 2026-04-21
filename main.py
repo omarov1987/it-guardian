@@ -74,7 +74,7 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     return {"message": "login ok", "user_id": user.id}
 
 
-def get_current_user(token: str = Header(None), db: Session = Depends(get_db)):
+def get_current_user(token: str = Header(None, alias="token"), db: Session = Depends(get_db)):
     if not token:
         raise HTTPException(status_code=401, detail="No token")
 
