@@ -2,185 +2,918 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>IT Guardian Dashboard</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Guardian — Device Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-body {
-    margin: 0;
-    font-family: "Segoe UI", Arial;
-    background: linear-gradient(135deg, #0f172a, #020617);
-    color: #e2e8f0;
-}
+  :root {
+    --bg:       #080c12;
+    --surface:  #0d1520;
+    --surface2: #111c2e;
+    --border:   #1a2d47;
+    --accent:   #00d4ff;
+    --green:    #00e676;
+    --red:      #ff3d57;
+    --yellow:   #ffd740;
+    --text:     #c8d8e8;
+    --muted:    #4a6080;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
 
-.container {
-    padding: 30px;
-}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-h1 {
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 28px 0;
+    z-index: 10;
+  }
+
+  .logo {
+    padding: 0 24px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-bottom: 10px;
+    box-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+
+  .logo-name {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    color: #fff;
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .nav-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0 24px;
+    margin-bottom: 8px;
+  }
+
+  .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 28px;
-    margin-bottom: 25px;
-}
-
-.cards {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
-}
-
-.stat {
-    background: #1e293b;
-    padding: 12px 22px;
-    border-radius: 12px;
-    font-weight: 500;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-}
-
-.grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-
-.card {
-    background: #1e293b;
-    padding: 20px;
-    border-radius: 18px;
-    width: 320px;
-    transition: 0.3s;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.online {
-    border-left: 5px solid #22c55e;
-}
-
-.offline {
-    border-left: 5px solid #ef4444;
-}
-
-.lowdisk {
-    border-left: 5px solid #facc15;
-}
-
-.status {
-    font-weight: bold;
-    margin-top: 10px;
-}
-
-.small {
-    opacity: 0.7;
+    gap: 10px;
+    padding: 10px 24px;
     font-size: 12px;
-}
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .nav-item.active, .nav-item:hover {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(0,212,255,0.05);
+  }
+
+  .nav-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 0 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(0,230,118,0); }
+  }
+
+  /* ── Main ── */
+  .main {
+    margin-left: 220px;
+    padding: 36px 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+  }
+
+  .page-title {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 26px;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  .page-title span { color: var(--accent); }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    transition: border-color 0.2s;
+  }
+
+  .search-box input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    width: 160px;
+  }
+
+  .search-box input::placeholder { color: var(--muted); }
+  .search-box:focus-within { border-color: var(--accent); }
+
+  .refresh-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn.spinning .icon { animation: spin 0.6s linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Stats ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.15;
+  }
+
+  .stat-card.total::after   { background: var(--accent);  right: -20px; top: -20px; }
+  .stat-card.s-online::after  { background: var(--green);   right: -20px; top: -20px; }
+  .stat-card.s-offline::after { background: var(--red);     right: -20px; top: -20px; }
+  .stat-card.s-lowdisk::after { background: var(--yellow);  right: -20px; top: -20px; }
+
+  .stat-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.1); }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .stat-value {
+    font-family: var(--font-head);
+    font-size: 38px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-card.total   .stat-value { color: var(--accent);  }
+  .stat-card.s-online  .stat-value { color: var(--green);  }
+  .stat-card.s-offline .stat-value { color: var(--red);    }
+  .stat-card.s-lowdisk .stat-value { color: var(--yellow); }
+
+  .stat-trend {
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .filter-btn.f-online.active  { background: rgba(0,230,118,0.1); border-color: var(--green);  color: var(--green);  }
+  .filter-btn.f-offline.active { background: rgba(255,61,87,0.1);  border-color: var(--red);    color: var(--red);    }
+  .filter-btn.f-lowdisk.active { background: rgba(255,215,64,0.1); border-color: var(--yellow); color: var(--yellow); }
+
+  .filter-count {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* ── Device grid ── */
+  .device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+
+  /* ── Device card ── */
+  .device-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .device-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+
+  .device-card.online  { border-color: rgba(0,230,118,0.3); }
+  .device-card.offline { border-color: rgba(255,61,87,0.3);  }
+  .device-card.lowdisk { border-color: rgba(255,215,64,0.3); }
+
+  .device-card.online:hover  { border-color: var(--green);  box-shadow: 0 12px 40px rgba(0,230,118,0.1); }
+  .device-card.offline:hover { border-color: var(--red);    box-shadow: 0 12px 40px rgba(255,61,87,0.1);  }
+  .device-card.lowdisk:hover { border-color: var(--yellow); box-shadow: 0 12px 40px rgba(255,215,64,0.1); }
+
+  /* Glow strip at top */
+  .device-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .device-card.online::before  { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+  .device-card.offline::before { background: linear-gradient(90deg, transparent, var(--red), transparent);   }
+  .device-card.lowdisk::before { background: linear-gradient(90deg, transparent, var(--yellow), transparent);}
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .online  .card-icon { background: rgba(0,230,118,0.1); }
+  .offline .card-icon { background: rgba(255,61,87,0.1);  }
+  .lowdisk .card-icon { background: rgba(255,215,64,0.1); }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .status-pill.online  { background: rgba(0,230,118,0.15); color: var(--green);  border: 1px solid rgba(0,230,118,0.3); }
+  .status-pill.offline { background: rgba(255,61,87,0.15);  color: var(--red);    border: 1px solid rgba(255,61,87,0.3);  }
+  .status-pill.lowdisk { background: rgba(255,215,64,0.15); color: var(--yellow); border: 1px solid rgba(255,215,64,0.3); }
+
+  .status-pill-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .online .status-pill-dot { animation: pulse 1.5s infinite; }
+
+  .card-hostname {
+    font-family: var(--font-head);
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+
+  .card-os {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  /* Metrics row */
+  .metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .metric {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .metric-label {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .metric-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .metric-value.warn { color: var(--yellow); }
+  .metric-value.ok   { color: var(--green);  }
+
+  /* Disk bar */
+  .disk-bar-wrap {
+    margin-bottom: 16px;
+  }
+
+  .disk-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .disk-bar-track {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .disk-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  .disk-bar-fill.ok   { background: var(--green); }
+  .disk-bar-fill.warn { background: var(--yellow); }
+  .disk-bar-fill.crit { background: var(--red); }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .last-seen {
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .last-seen-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+
+  .empty-state .big { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 12px; line-height: 1.8; }
+
+  /* ── Loading skeleton ── */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .skel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .skel-row { height: 12px; margin-bottom: 10px; }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 24px 20px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .device-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
-
 <body>
 
-<div class="container">
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-name">IT Guardian</div>
+    <div class="logo-sub">Device Monitor</div>
+  </div>
 
-<h1>🛡️ Omar Guardian Dashboard</h1>
+  <div class="nav-label">Overview</div>
+  <a class="nav-item active" href="#">
+    <span class="nav-dot"></span> All Devices
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Alerts
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Reports
+  </a>
 
-<div class="cards">
-    <div class="stat">Total: <span id="total">0</span></div>
-    <div class="stat" style="color:#22c55e;">Online: <span id="online">0</span></div>
-    <div class="stat" style="color:#ef4444;">Offline: <span id="offline">0</span></div>
-    <div class="stat" style="color:#facc15;">Low Disk: <span id="lowdisk">0</span></div>
-</div>
+  <div class="nav-label" style="margin-top:24px;">System</div>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Settings
+  </a>
+  <a class="nav-item" href="#">
+    <span class="nav-dot"></span> Users
+  </a>
 
-<div class="grid" id="devices"></div>
+  <div class="sidebar-footer">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE MONITORING
+    </div>
+    <div style="font-size:9px; color:var(--muted); margin-top:8px;" id="last-update">—</div>
+  </div>
+</aside>
 
-</div>
+<!-- Main -->
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="page-title">Device <span>Overview</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="search-box">
+        🔍
+        <input type="text" id="search-input" placeholder="Search hostname...">
+      </div>
+      <button class="refresh-btn" id="refresh-btn" onclick="refresh()">
+        <span class="icon">↻</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card total">
+      <div class="stat-label">Total Devices</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-trend">registered</div>
+    </div>
+    <div class="stat-card s-online">
+      <div class="stat-label">Online</div>
+      <div class="stat-value" id="stat-online">—</div>
+      <div class="stat-trend">last 10 min</div>
+    </div>
+    <div class="stat-card s-offline">
+      <div class="stat-label">Offline</div>
+      <div class="stat-value" id="stat-offline">—</div>
+      <div class="stat-trend">inactive</div>
+    </div>
+    <div class="stat-card s-lowdisk">
+      <div class="stat-label">Low Disk</div>
+      <div class="stat-value" id="stat-lowdisk">—</div>
+      <div class="stat-trend">under 10 GB free</div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">All</button>
+    <button class="filter-btn f-online"  data-filter="online"  onclick="setFilter(this)">Online</button>
+    <button class="filter-btn f-offline" data-filter="offline" onclick="setFilter(this)">Offline</button>
+    <button class="filter-btn f-lowdisk" data-filter="lowdisk" onclick="setFilter(this)">Low Disk</button>
+    <span class="filter-count" id="filter-count"></span>
+  </div>
+
+  <!-- Device grid -->
+  <div class="device-grid" id="device-grid">
+    <!-- Skeleton -->
+    <div class="skel-card">
+      <div class="skeleton skel-row" style="width:60%"></div>
+      <div class="skeleton skel-row" style="width:40%"></div>
+      <div class="skeleton skel-row" style="width:80%; margin-top:20px;"></div>
+      <div class="skeleton skel-row" style="width:70%"></div>
+    </div>
+    <div class="skel-card">
+      <div class="skeleton skel-row" style="width:55%"></div>
+      <div class="skeleton skel-row" style="width:35%"></div>
+      <div class="skeleton skel-row" style="width:75%; margin-top:20px;"></div>
+      <div class="skeleton skel-row" style="width:65%"></div>
+    </div>
+    <div class="skel-card">
+      <div class="skeleton skel-row" style="width:70%"></div>
+      <div class="skeleton skel-row" style="width:45%"></div>
+      <div class="skeleton skel-row" style="width:85%; margin-top:20px;"></div>
+      <div class="skeleton skel-row" style="width:60%"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div class="toast-container" id="toast-container"></div>
 
 <script>
+const TOKEN   = "1";
+const API_URL = "https://omar-it-guardian.onrender.com"; // ← deine Render-URL
+let allDevices = [];
+let currentFilter = "all";
 
-const token = "1";   
-
-function timeAgo(date) {
-    const now = new Date();
-    const past = new Date(date + "Z");
-
-    const seconds = Math.floor((now - past) / 1000);
-
-    if (seconds < 60) return seconds + " sec ago";
-    if (seconds < 3600) return Math.floor(seconds / 60) + " min ago";
-    if (seconds < 86400) return Math.floor(seconds / 3600) + " h ago";
-
-    return Math.floor(seconds / 86400) + " d ago";
+// ── Time helper ──
+function timeAgo(iso) {
+  const past = new Date(iso + "Z");
+  const sec  = Math.floor((Date.now() - past) / 1000);
+  if (sec < 60)   return sec + "s ago";
+  if (sec < 3600) return Math.floor(sec/60) + "m ago";
+  if (sec < 86400)return Math.floor(sec/3600) + "h ago";
+  return Math.floor(sec/86400) + "d ago";
 }
 
+// ── Classify device ──
+function classify(d) {
+  const mins = (Date.now() - new Date(d.last_seen + "Z")) / 60000;
+  const isOffline  = mins > 10;
+  const isLowDisk  = d.disk_free < 10 * 1024 * 1024 * 1024;
+  if (isOffline)  return "offline";
+  if (isLowDisk)  return "lowdisk";
+  return "online";
+}
+
+// ── Disk label & bar ──
+function diskInfo(d) {
+  const gb    = d.disk_free / (1024**3);
+  const total = 100; // we don't have total; show absolute
+  const pct   = Math.min(100, Math.max(2, (gb / 500) * 100)); // scale to 500GB max
+  let cls = "ok";
+  if (gb < 10) cls = "crit";
+  else if (gb < 30) cls = "warn";
+  return { gb: gb.toFixed(1), pct, cls };
+}
+
+// ── Build card HTML ──
+function buildCard(d, idx) {
+  const cls   = classify(d);
+  const disk  = diskInfo(d);
+  const emoji = cls === "offline" ? "💤" : cls === "lowdisk" ? "⚠️" : "💻";
+
+  const statusLabels = { online: "Online", offline: "Offline", lowdisk: "Low Disk" };
+  const statusLabel  = statusLabels[cls];
+
+  const shortHost = d.hostname.length > 22
+    ? d.hostname.substring(0, 22) + "…"
+    : d.hostname;
+
+  const delay = idx * 0.05;
+
+  return `
+    <div class="device-card ${cls}" style="animation-delay:${delay}s">
+      <div class="card-header">
+        <div class="card-icon">${emoji}</div>
+        <div class="status-pill ${cls}">
+          <span class="status-pill-dot"></span>
+          ${statusLabel}
+        </div>
+      </div>
+
+      <div class="card-hostname" title="${d.hostname}">${shortHost}</div>
+      <div class="card-os">${d.os || "Unknown OS"}</div>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Disk Free</div>
+          <div class="metric-value ${disk.gb < 10 ? 'warn' : 'ok'}">${disk.gb} GB</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Status</div>
+          <div class="metric-value ${cls === 'online' ? 'ok' : 'warn'}">${cls.toUpperCase()}</div>
+        </div>
+      </div>
+
+      <div class="disk-bar-wrap">
+        <div class="disk-bar-label">
+          <span>Disk space</span>
+          <span>${disk.gb} GB free</span>
+        </div>
+        <div class="disk-bar-track">
+          <div class="disk-bar-fill ${disk.cls}" style="width:${disk.pct}%"></div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="last-seen">
+          <span class="last-seen-dot"></span>
+          ${timeAgo(d.last_seen)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Filter ──
+function setFilter(btn) {
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  currentFilter = btn.dataset.filter;
+  renderDevices();
+}
+
+// ── Render ──
+function renderDevices() {
+  const query = document.getElementById("search-input").value.toLowerCase();
+  let devices = allDevices;
+
+  if (currentFilter !== "all") {
+    devices = devices.filter(d => classify(d) === currentFilter);
+  }
+
+  if (query) {
+    devices = devices.filter(d => d.hostname.toLowerCase().includes(query));
+  }
+
+  const grid = document.getElementById("device-grid");
+
+  if (devices.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="big">📡</div>
+        <p>No devices found.<br>Check your filters or wait for agents to connect.</p>
+      </div>
+    `;
+    document.getElementById("filter-count").textContent = "0 devices";
+    return;
+  }
+
+  grid.innerHTML = devices.map((d, i) => buildCard(d, i)).join("");
+  document.getElementById("filter-count").textContent = devices.length + " device" + (devices.length !== 1 ? "s" : "");
+}
+
+// ── Load from API ──
 async function loadDevices() {
+  try {
+    const res = await fetch(`${API_URL}/devices?token=${TOKEN}`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
 
-    try {
-        const res = await fetch(`/devices?token=${token}`);
-        const data = await res.json();
+    data.sort((a,b) => new Date(b.last_seen) - new Date(a.last_seen));
+    allDevices = data;
 
-        let online = 0;
-        let offline = 0;
-        let lowdisk = 0;
+    // Stats
+    let online = 0, offline = 0, lowdisk = 0;
+    data.forEach(d => {
+      const c = classify(d);
+      if (c === "online")  online++;
+      if (c === "offline") offline++;
+      if (c === "lowdisk") lowdisk++;
+    });
 
-        const container = document.getElementById("devices");
-        container.innerHTML = "";
+    document.getElementById("stat-total").textContent   = data.length;
+    document.getElementById("stat-online").textContent  = online;
+    document.getElementById("stat-offline").textContent = offline;
+    document.getElementById("stat-lowdisk").textContent = lowdisk;
 
-        data.sort((a,b) => new Date(b.last_seen) - new Date(a.last_seen));
+    // Last update
+    const now = new Date();
+    document.getElementById("last-update").textContent =
+      "Updated " + now.toLocaleTimeString();
 
-        data.forEach(d => {
-
-            const lastSeen = new Date(d.last_seen + "Z");
-            const now = new Date();
-            const minutes = (now - lastSeen) / 60000;
-
-            let status = "ONLINE";
-            let css = "online";
-
-            if (minutes > 10) {
-                status = "OFFLINE";
-                css = "offline";
-                offline++;
-            } else {
-                online++;
-            }
-
-            if (d.disk_free < 10 * 1024 * 1024 * 1024) {
-                css = "lowdisk";
-                lowdisk++;
-            }
-
-            const card = document.createElement("div");
-            card.className = "card " + css;
-
-            card.innerHTML = `
-                <h3>💻 ${d.hostname}</h3>
-                <p>OS: ${d.os}</p>
-                <p>Disk: ${(d.disk_free / (1024*1024*1024)).toFixed(1)} GB free</p>
-                <p class="status">Status: ${status}</p>
-                <div class="small">Last seen: ${timeAgo(d.last_seen)}</div>
-            `;
-
-            container.appendChild(card);
-        });
-
-        document.getElementById("total").innerText = data.length;
-        document.getElementById("online").innerText = online;
-        document.getElementById("offline").innerText = offline;
-        document.getElementById("lowdisk").innerText = lowdisk;
-
-    } catch (err) {
-        console.error("Error loading devices", err);
-    }
+    renderDevices();
+  } catch (err) {
+    console.error("Load error:", err);
+    showToast("⚠️ Could not reach API", "red");
+  }
 }
 
+// ── Refresh button ──
+function refresh() {
+  const btn = document.getElementById("refresh-btn");
+  btn.classList.add("spinning");
+  loadDevices().finally(() => {
+    setTimeout(() => btn.classList.remove("spinning"), 600);
+  });
+}
+
+// ── Search ──
+document.getElementById("search-input").addEventListener("input", renderDevices);
+
+// ── Toast ──
+function showToast(msg, color) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.style.borderColor = color === "red" ? "var(--red)" : "var(--green)";
+  t.innerHTML = msg;
+  document.getElementById("toast-container").appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ── Auto refresh every 5s ──
 setInterval(loadDevices, 5000);
 loadDevices();
-
 </script>
-
 </body>
 </html>

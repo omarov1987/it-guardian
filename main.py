@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -56,44 +56,8 @@ def dashboard():
     return FileResponse("dashboard.html")
 
 
-@app.get("/register")
-def register(username: str, password: str, db: Session = Depends(get_db)):
-    user = models.User(username=username, password=password)
-    db.add(user)
-    db.commit()
-    return {"status": "user created"}
-
-
-@app.get("/login")
-def login(username: str, password: str, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.username == username).first()
-
-    if not user or user.password != password:
-        raise HTTPException(status_code=401, detail="wrong credentials")
-
-    return {"message": "login ok", "user_id": user.id}
-
-
-def get_current_user(token: str = None, db: Session = Depends(get_db)):
-    if not token:
-        raise HTTPException(status_code=401, detail="No token")
-
-    try:
-        user_id = int(token)
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    return user
-
-
 @app.post("/device")
-def receive_device(device: Device, token: str = None, db: Session = Depends(get_db)):
-    user = get_current_user(token, db)
+def receive_device(device: Device, db: Session = Depends(get_db)):
 
     db_device = db.query(models.Device).filter(
         models.Device.hostname == device.hostname
@@ -103,32 +67,23 @@ def receive_device(device: Device, token: str = None, db: Session = Depends(get_
         db_device.os = device.os_version
         db_device.disk_free = device.disk_free
         db_device.last_seen = datetime.utcnow()
-        db_device.offline_alert_sent = False
-        db_device.disk_alert_sent = False
     else:
         db_device = models.Device(
             hostname=device.hostname,
             os=device.os_version,
             disk_free=device.disk_free,
-            last_seen=datetime.utcnow(),
-            owner_id=user.id,
-            offline_alert_sent=False,
-            disk_alert_sent=False
+            last_seen=datetime.utcnow()
         )
         db.add(db_device)
 
     db.commit()
-
     return {"status": "stored"}
 
 
 @app.get("/devices")
-def get_devices(token: str = None, db: Session = Depends(get_db)):
-    user = get_current_user(token, db)
+def get_devices(db: Session = Depends(get_db)):
 
-    devices = db.query(models.Device).filter(
-        models.Device.owner_id == user.id
-    ).all()
+    devices = db.query(models.Device).all()
 
     return [
         {
@@ -149,16 +104,10 @@ def check_alerts(db: Session = Depends(get_db)):
     for device in devices:
 
         if datetime.utcnow() - device.last_seen > timedelta(minutes=10):
-            alerts.append({
-                "device": device.hostname,
-                "type": "offline"
-            })
+            alerts.append({"device": device.hostname, "type": "offline"})
 
             if not device.offline_alert_sent:
-                send_email(
-                    "🚨 Device Offline",
-                    f"{device.hostname} is offline!"
-                )
+                send_email("🚨 Device Offline", f"{device.hostname} is offline!")
                 device.offline_alert_sent = True
                 db.commit()
         else:
@@ -167,16 +116,10 @@ def check_alerts(db: Session = Depends(get_db)):
                 db.commit()
 
         if device.disk_free < 10 * 1024 * 1024 * 1024:
-            alerts.append({
-                "device": device.hostname,
-                "type": "low_disk"
-            })
+            alerts.append({"device": device.hostname, "type": "low_disk"})
 
             if not device.disk_alert_sent:
-                send_email(
-                    "⚠️ Low Disk Space",
-                    f"{device.hostname} has low disk space!"
-                )
+                send_email("⚠️ Low Disk Space", f"{device.hostname} low disk!")
                 device.disk_alert_sent = True
                 db.commit()
         else:
